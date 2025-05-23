@@ -1,0 +1,1270 @@
+{% extends "base.html" %}
+
+{% block title %}New Evaluation - OpenEvals{% endblock %}
+
+{% block extra_head %}
+<style>
+    .evaluation-wizard {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .wizard-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .wizard-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    
+    .wizard-subtitle {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+    
+    .wizard-steps {
+        display: flex;
+        justify-content: center;
+        margin-bottom: var(--spacing-xl);
+        position: relative;
+    }
+    
+    .wizard-steps::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 25%;
+        right: 25%;
+        height: 2px;
+        background: var(--border-color);
+        z-index: 1;
+    }
+    
+    .wizard-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        background: var(--bg-secondary);
+        padding: 0 var(--spacing-md);
+    }
+    
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--bg-quaternary);
+        color: var(--text-tertiary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.875rem;
+        margin-bottom: var(--spacing-sm);
+        transition: all var(--transition-normal);
+    }
+    
+    .wizard-step.active .step-number {
+        background: var(--color-primary);
+        color: white;
+    }
+    
+    .wizard-step.completed .step-number {
+        background: var(--color-success);
+        color: white;
+    }
+    
+    .step-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+    
+    .wizard-step.active .step-label {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .wizard-content {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-small);
+    }
+    
+    .step-content {
+        display: none;
+    }
+    
+    .step-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .step-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-lg) 0;
+    }
+    
+    .step-description {
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .form-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .section-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-md) 0;
+        padding-bottom: var(--spacing-sm);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+    }
+    
+    .config-card {
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+        padding: var(--spacing-lg);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+        position: relative;
+    }
+    
+    .config-card:hover {
+        border-color: var(--color-primary);
+        box-shadow: var(--shadow-small);
+    }
+    
+    .config-card.selected {
+        border-color: var(--color-primary);
+        background: rgba(0, 122, 255, 0.05);
+    }
+    
+    .config-card::before {
+        content: '';
+        position: absolute;
+        top: var(--spacing-md);
+        right: var(--spacing-md);
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border-color);
+        border-radius: 50%;
+        transition: all var(--transition-fast);
+    }
+    
+    .config-card.selected::before {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+    }
+    
+    .config-card.selected::after {
+        content: '✓';
+        position: absolute;
+        top: calc(var(--spacing-md) + 3px);
+        right: calc(var(--spacing-md) + 6px);
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .config-title {
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-sm) 0;
+        padding-right: var(--spacing-xl);
+    }
+    
+    .config-description {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .config-details {
+        margin-top: var(--spacing-md);
+        padding-top: var(--spacing-md);
+        border-top: 1px solid var(--border-color);
+    }
+    
+    .config-detail-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-xs);
+        font-size: 0.75rem;
+    }
+    
+    .config-detail-label {
+        color: var(--text-secondary);
+    }
+    
+    .config-detail-value {
+        color: var(--text-primary);
+        font-weight: 500;
+    }
+    
+    .advanced-config {
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius-small);
+        padding: var(--spacing-lg);
+        margin-top: var(--spacing-lg);
+    }
+    
+    .advanced-toggle {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-lg);
+        cursor: pointer;
+        user-select: none;
+    }
+    
+    .advanced-content {
+        display: none;
+    }
+    
+    .advanced-content.show {
+        display: block;
+        animation: fadeIn 0.3s ease-out;
+    }
+    
+    .metric-config {
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .metric-name {
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    .metric-weight {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+    }
+    
+    .wizard-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-lg) 0;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: var(--spacing-md);
+    }
+    
+    .validation-summary {
+        background: var(--bg-secondary);
+        border-radius: var(--border-radius-small);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .validation-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+        font-size: 0.875rem;
+    }
+    
+    .validation-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .validation-item.valid {
+        color: var(--color-success);
+    }
+    
+    .validation-item.invalid {
+        color: var(--color-error);
+    }
+    
+    .field-error {
+        color: var(--color-error);
+        font-size: 0.75rem;
+        margin-top: var(--spacing-xs);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+    
+    .form-control.error {
+        border-color: var(--color-error);
+    }
+    
+    .file-upload-area {
+        border: 2px dashed var(--border-color);
+        border-radius: var(--border-radius-small);
+        padding: var(--spacing-xl);
+        text-align: center;
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+    
+    .file-upload-area:hover {
+        border-color: var(--color-primary);
+        background: rgba(0, 122, 255, 0.05);
+    }
+    
+    .file-upload-area.dragover {
+        border-color: var(--color-primary);
+        background: rgba(0, 122, 255, 0.1);
+    }
+    
+    .upload-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto var(--spacing-md);
+        color: var(--text-tertiary);
+    }
+    
+    .upload-text {
+        color: var(--text-secondary);
+        margin: 0;
+    }
+    
+    .upload-hint {
+        color: var(--text-tertiary);
+        font-size: 0.75rem;
+        margin: var(--spacing-sm) 0 0 0;
+    }
+    
+    @media (max-width: 768px) {
+        .evaluation-wizard {
+            max-width: 100%;
+            padding: 0 var(--spacing-md);
+        }
+        
+        .wizard-steps {
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .wizard-steps::before {
+            display: none;
+        }
+        
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .wizard-actions {
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="evaluation-wizard">
+    <!-- Wizard Header -->
+    <div class="wizard-header">
+        <h1 class="wizard-title">Create New Evaluation</h1>
+        <p class="wizard-subtitle">Configure and launch a comprehensive AI evaluation suite</p>
+    </div>
+    
+    <!-- Wizard Steps -->
+    <div class="wizard-steps">
+        <div class="wizard-step active" data-step="1">
+            <div class="step-number">1</div>
+            <div class="step-label">Suite Selection</div>
+        </div>
+        <div class="wizard-step" data-step="2">
+            <div class="step-number">2</div>
+            <div class="step-label">Target System</div>
+        </div>
+        <div class="wizard-step" data-step="3">
+            <div class="step-number">3</div>
+            <div class="step-label">Configuration</div>
+        </div>
+        <div class="wizard-step" data-step="4">
+            <div class="step-number">4</div>
+            <div class="step-label">Review & Launch</div>
+        </div>
+    </div>
+    
+    <!-- Wizard Form -->
+    <form id="evaluation-form" method="post" enctype="multipart/form-data">
+        <div class="wizard-content">
+            <!-- Step 1: Suite Selection -->
+            <div class="step-content active" data-step="1">
+                <h2 class="step-title">Select Evaluation Suite</h2>
+                <p class="step-description">Choose a pre-configured evaluation suite or upload your own custom configuration.</p>
+                
+                <div class="form-section">
+                    <h3 class="section-title">Available Suites</h3>
+                    <div class="form-grid">
+                        <div class="config-card" data-suite="basic_qa">
+                            <h4 class="config-title">Basic Q&A</h4>
+                            <p class="config-description">Fundamental question-answering capabilities evaluation</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Tasks:</span>
+                                    <span class="config-detail-value">25</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Metrics:</span>
+                                    <span class="config-detail-value">Exact Match, F1, ROUGE</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Est. Duration:</span>
+                                    <span class="config-detail-value">~5 minutes</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-card" data-suite="comprehensive">
+                            <h4 class="config-title">Comprehensive</h4>
+                            <p class="config-description">Full spectrum evaluation across multiple domains and capabilities</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Tasks:</span>
+                                    <span class="config-detail-value">150</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Metrics:</span>
+                                    <span class="config-detail-value">All Available</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Est. Duration:</span>
+                                    <span class="config-detail-value">~30 minutes</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-card" data-suite="reasoning">
+                            <h4 class="config-title">Reasoning & Logic</h4>
+                            <p class="config-description">Complex reasoning, mathematical, and logical problem solving</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Tasks:</span>
+                                    <span class="config-detail-value">75</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Metrics:</span>
+                                    <span class="config-detail-value">Accuracy, Logic Score</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Est. Duration:</span>
+                                    <span class="config-detail-value">~15 minutes</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-card" data-suite="custom">
+                            <h4 class="config-title">Custom Upload</h4>
+                            <p class="config-description">Upload your own evaluation configuration file</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Format:</span>
+                                    <span class="config-detail-value">YAML</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Max Size:</span>
+                                    <span class="config-detail-value">16 MB</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Upload Area -->
+                    <div id="custom-upload-area" style="display: none;">
+                        <div class="file-upload-area" onclick="document.getElementById('config-file').click()">
+                            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M17 8l-4-4-4 4"/>
+                                <path d="M13 12V4"/>
+                            </svg>
+                            <p class="upload-text">Click to upload or drag and drop</p>
+                            <p class="upload-hint">YAML configuration files only</p>
+                        </div>
+                        <input type="file" id="config-file" name="config_file" accept=".yaml,.yml" style="display: none;">
+                    </div>
+                </div>
+                
+                <input type="hidden" name="suite_id" id="suite_id">
+            </div>
+            
+            <!-- Step 2: Target System -->
+            <div class="step-content" data-step="2">
+                <h2 class="step-title">Target System Configuration</h2>
+                <p class="step-description">Configure the AI system you want to evaluate.</p>
+                
+                <div class="form-section">
+                    <h3 class="section-title">System Type</h3>
+                    <div class="form-grid">
+                        <div class="config-card" data-target="openai_gpt4">
+                            <h4 class="config-title">OpenAI GPT-4</h4>
+                            <p class="config-description">Latest OpenAI GPT-4 model via API</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Model:</span>
+                                    <span class="config-detail-value">gpt-4-turbo</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">API Key:</span>
+                                    <span class="config-detail-value">Required</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-card" data-target="openai_gpt35">
+                            <h4 class="config-title">OpenAI GPT-3.5</h4>
+                            <p class="config-description">OpenAI GPT-3.5 Turbo model</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Model:</span>
+                                    <span class="config-detail-value">gpt-3.5-turbo</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">API Key:</span>
+                                    <span class="config-detail-value">Required</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-card" data-target="huggingface">
+                            <h4 class="config-title">Hugging Face</h4>
+                            <p class="config-description">Any model from Hugging Face Hub</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Models:</span>
+                                    <span class="config-detail-value">Any HF Model</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Token:</span>
+                                    <span class="config-detail-value">Optional</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="config-card" data-target="custom_api">
+                            <h4 class="config-title">Custom API</h4>
+                            <p class="config-description">Connect to your own API endpoint</p>
+                            <div class="config-details">
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Endpoint:</span>
+                                    <span class="config-detail-value">Custom URL</span>
+                                </div>
+                                <div class="config-detail-item">
+                                    <span class="config-detail-label">Auth:</span>
+                                    <span class="config-detail-value">Configurable</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Target System Config -->
+                <div class="form-section">
+                    <h3 class="section-title">System Configuration</h3>
+                    
+                    <!-- OpenAI Config -->
+                    <div id="openai-config" class="target-config" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="openai_api_key">OpenAI API Key</label>
+                            <input type="password" class="form-control" id="openai_api_key" name="openai_api_key" placeholder="sk-...">
+                            <small class="form-help">Your OpenAI API key will be used securely for this evaluation only.</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="openai_model">Model</label>
+                            <select class="form-control form-select" id="openai_model" name="openai_model">
+                                <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                                <option value="gpt-4">GPT-4</option>
+                                <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="temperature">Temperature</label>
+                            <input type="range" class="form-control" id="temperature" name="temperature" min="0" max="1" step="0.1" value="0.7">
+                            <small class="form-help">Controls randomness: 0 = deterministic, 1 = very random</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Hugging Face Config -->
+                    <div id="huggingface-config" class="target-config" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="hf_model">Model Name</label>
+                            <input type="text" class="form-control" id="hf_model" name="hf_model" placeholder="microsoft/DialoGPT-medium">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="hf_token">Hugging Face Token (Optional)</label>
+                            <input type="password" class="form-control" id="hf_token" name="hf_token" placeholder="hf_...">
+                        </div>
+                    </div>
+                    
+                    <!-- Custom API Config -->
+                    <div id="custom-config" class="target-config" style="display: none;">
+                        <div class="form-group">
+                            <label class="form-label" for="api_endpoint">API Endpoint</label>
+                            <input type="url" class="form-control" id="api_endpoint" name="api_endpoint" placeholder="https://api.example.com/v1/generate">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="api_headers">Headers (JSON)</label>
+                            <textarea class="form-control" id="api_headers" name="api_headers" rows="3" placeholder='{"Authorization": "Bearer your-token"}'></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <input type="hidden" name="target_system" id="target_system">
+            </div>
+            
+            <!-- Step 3: Configuration -->
+            <div class="step-content" data-step="3">
+                <h2 class="step-title">Evaluation Configuration</h2>
+                <p class="step-description">Fine-tune the evaluation parameters and metrics.</p>
+                
+                <div class="form-section">
+                    <h3 class="section-title">General Settings</h3>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="max_workers">Parallel Workers</label>
+                        <select class="form-control form-select" id="max_workers" name="max_workers">
+                            <option value="1">1 (Sequential)</option>
+                            <option value="2">2</option>
+                            <option value="4" selected>4 (Recommended)</option>
+                            <option value="8">8</option>
+                            <option value="16">16 (High Performance)</option>
+                        </select>
+                        <small class="form-help">Number of parallel evaluation workers. Higher values may hit API rate limits.</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="timeout">Request Timeout (seconds)</label>
+                        <input type="number" class="form-control" id="timeout" name="timeout" value="30" min="10" max="300">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="retry_attempts">Retry Attempts</label>
+                        <input type="number" class="form-control" id="retry_attempts" name="retry_attempts" value="3" min="0" max="10">
+                    </div>
+                </div>
+                
+                <!-- Advanced Configuration -->
+                <div class="advanced-config">
+                    <div class="advanced-toggle" onclick="toggleAdvanced()">
+                        <input type="checkbox" id="show-advanced">
+                        <label for="show-advanced">Show Advanced Configuration</label>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6"/>
+                        </svg>
+                    </div>
+                    
+                    <div class="advanced-content">
+                        <div class="form-section">
+                            <h3 class="section-title">Metric Weights</h3>
+                            <p class="step-description">Adjust the importance of different evaluation metrics.</p>
+                            
+                            <div id="metrics-config">
+                                <div class="metric-config">
+                                    <div class="metric-header">
+                                        <span class="metric-name">Exact Match</span>
+                                        <span class="metric-weight">Weight: <span id="exact-match-weight">0.3</span></span>
+                                    </div>
+                                    <input type="range" class="form-control" name="exact_match_weight" min="0" max="1" step="0.1" value="0.3" onchange="updateWeight('exact-match-weight', this.value)">
+                                </div>
+                                
+                                <div class="metric-config">
+                                    <div class="metric-header">
+                                        <span class="metric-name">F1 Score</span>
+                                        <span class="metric-weight">Weight: <span id="f1-weight">0.3</span></span>
+                                    </div>
+                                    <input type="range" class="form-control" name="f1_weight" min="0" max="1" step="0.1" value="0.3" onchange="updateWeight('f1-weight', this.value)">
+                                </div>
+                                
+                                <div class="metric-config">
+                                    <div class="metric-header">
+                                        <span class="metric-name">Semantic Similarity</span>
+                                        <span class="metric-weight">Weight: <span id="semantic-weight">0.4</span></span>
+                                    </div>
+                                    <input type="range" class="form-control" name="semantic_weight" min="0" max="1" step="0.1" value="0.4" onchange="updateWeight('semantic-weight', this.value)">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-section">
+                            <h3 class="section-title">Output Options</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <input type="checkbox" name="generate_html_report" checked>
+                                    Generate HTML Report
+                                </label>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <input type="checkbox" name="generate_json_report" checked>
+                                    Generate JSON Report
+                                </label>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    <input type="checkbox" name="save_raw_responses">
+                                    Save Raw Model Responses
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Review & Launch -->
+            <div class="step-content" data-step="4">
+                <h2 class="step-title">Review & Launch</h2>
+                <p class="step-description">Review your configuration and launch the evaluation.</p>
+                
+                <div class="validation-summary">
+                    <h3 class="section-title">Configuration Summary</h3>
+                    <div id="config-summary">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+                
+                <div class="validation-summary">
+                    <h3 class="section-title">Pre-flight Checks</h3>
+                    <div id="validation-results">
+                        <div class="validation-item invalid">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M15 9l-6 6M9 9l6 6"/>
+                            </svg>
+                            Please complete all required fields
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-section">
+                    <div class="form-group">
+                        <label class="form-label" for="evaluation_name">Evaluation Name (Optional)</label>
+                        <input type="text" class="form-control" id="evaluation_name" name="evaluation_name" placeholder="My Evaluation Run">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="description">Description (Optional)</label>
+                        <textarea class="form-control" id="description" name="description" rows="3" placeholder="Brief description of this evaluation..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Wizard Actions -->
+        <div class="wizard-actions">
+            <div>
+                <button type="button" class="btn btn-outline" id="prev-btn" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    </svg>
+                    Previous
+                </button>
+            </div>
+            
+            <div class="btn-group">
+                <button type="button" class="btn btn-outline" id="save-draft">Save Draft</button>
+                <button type="button" class="btn btn-primary" id="next-btn">
+                    Next
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 12h14M12 5l7 7-7 7"/>
+                    </svg>
+                </button>
+                <button type="submit" class="btn btn-primary" id="submit-btn" style="display: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    Launch Evaluation
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+class EvaluationWizard {
+    constructor() {
+        this.currentStep = 1;
+        this.totalSteps = 4;
+        this.formData = {};
+        
+        this.init();
+    }
+    
+    init() {
+        this.bindEvents();
+        this.setupFileUpload();
+        this.updateStepDisplay();
+    }
+    
+    bindEvents() {
+        // Navigation buttons
+        document.getElementById('next-btn').addEventListener('click', () => this.nextStep());
+        document.getElementById('prev-btn').addEventListener('click', () => this.prevStep());
+        document.getElementById('submit-btn').addEventListener('click', (e) => this.submitForm(e));
+        
+        // Suite selection
+        document.querySelectorAll('.config-card[data-suite]').forEach(card => {
+            card.addEventListener('click', () => this.selectSuite(card));
+        });
+        
+        // Target system selection
+        document.querySelectorAll('.config-card[data-target]').forEach(card => {
+            card.addEventListener('click', () => this.selectTarget(card));
+        });
+        
+        // Form validation
+        document.getElementById('evaluation-form').addEventListener('input', () => this.validateCurrentStep());
+        
+        // Save draft
+        document.getElementById('save-draft').addEventListener('click', () => this.saveDraft());
+    }
+    
+    setupFileUpload() {
+        const uploadArea = document.getElementById('custom-upload-area');
+        const fileInput = document.getElementById('config-file');
+        
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                this.handleFileUpload(files[0]);
+            }
+        });
+        
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                this.handleFileUpload(e.target.files[0]);
+            }
+        });
+    }
+    
+    selectSuite(card) {
+        // Remove previous selection
+        document.querySelectorAll('.config-card[data-suite]').forEach(c => c.classList.remove('selected'));
+        
+        // Select current card
+        card.classList.add('selected');
+        const suiteId = card.dataset.suite;
+        document.getElementById('suite_id').value = suiteId;
+        
+        // Show/hide custom upload
+        const uploadArea = document.getElementById('custom-upload-area');
+        if (suiteId === 'custom') {
+            uploadArea.style.display = 'block';
+        } else {
+            uploadArea.style.display = 'none';
+        }
+        
+        this.formData.suite_id = suiteId;
+        this.validateCurrentStep();
+    }
+    
+    selectTarget(card) {
+        // Remove previous selection
+        document.querySelectorAll('.config-card[data-target]').forEach(c => c.classList.remove('selected'));
+        
+        // Select current card
+        card.classList.add('selected');
+        const targetId = card.dataset.target;
+        document.getElementById('target_system').value = targetId;
+        
+        // Show/hide target configs
+        document.querySelectorAll('.target-config').forEach(config => {
+            config.style.display = 'none';
+        });
+        
+        if (targetId.startsWith('openai')) {
+            document.getElementById('openai-config').style.display = 'block';
+        } else if (targetId === 'huggingface') {
+            document.getElementById('huggingface-config').style.display = 'block';
+        } else if (targetId === 'custom_api') {
+            document.getElementById('custom-config').style.display = 'block';
+        }
+        
+        this.formData.target_system = targetId;
+        this.validateCurrentStep();
+    }
+    
+    handleFileUpload(file) {
+        if (file.type !== 'application/x-yaml' && !file.name.endsWith('.yaml') && !file.name.endsWith('.yml')) {
+            showToast('Please upload a YAML file', 'error');
+            return;
+        }
+        
+        if (file.size > 16 * 1024 * 1024) {
+            showToast('File size must be less than 16MB', 'error');
+            return;
+        }
+        
+        // Update upload area to show file name
+        const uploadArea = document.querySelector('.file-upload-area');
+        uploadArea.innerHTML = `
+            <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+            </svg>
+            <p class="upload-text">${file.name}</p>
+            <p class="upload-hint">Click to change file</p>
+        `;
+        
+        this.formData.config_file = file;
+        this.validateCurrentStep();
+    }
+    
+    nextStep() {
+        if (!this.validateCurrentStep()) {
+            return;
+        }
+        
+        if (this.currentStep < this.totalSteps) {
+            this.currentStep++;
+            this.updateStepDisplay();
+            
+            if (this.currentStep === 4) {
+                this.updateSummary();
+            }
+        }
+    }
+    
+    prevStep() {
+        if (this.currentStep > 1) {
+            this.currentStep--;
+            this.updateStepDisplay();
+        }
+    }
+    
+    updateStepDisplay() {
+        // Update step indicators
+        document.querySelectorAll('.wizard-step').forEach((step, index) => {
+            step.classList.remove('active', 'completed');
+            
+            if (index + 1 < this.currentStep) {
+                step.classList.add('completed');
+            } else if (index + 1 === this.currentStep) {
+                step.classList.add('active');
+            }
+        });
+        
+        // Update step content
+        document.querySelectorAll('.step-content').forEach((content, index) => {
+            content.classList.remove('active');
+            
+            if (index + 1 === this.currentStep) {
+                content.classList.add('active');
+            }
+        });
+        
+        // Update navigation buttons
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        prevBtn.style.display = this.currentStep > 1 ? 'block' : 'none';
+        
+        if (this.currentStep === this.totalSteps) {
+            nextBtn.style.display = 'none';
+            submitBtn.style.display = 'block';
+        } else {
+            nextBtn.style.display = 'block';
+            submitBtn.style.display = 'none';
+        }
+    }
+    
+    validateCurrentStep() {
+        let isValid = true;
+        const validationResults = document.getElementById('validation-results');
+        
+        switch (this.currentStep) {
+            case 1:
+                isValid = this.validateSuiteSelection();
+                break;
+            case 2:
+                isValid = this.validateTargetSystem();
+                break;
+            case 3:
+                isValid = this.validateConfiguration();
+                break;
+            case 4:
+                isValid = this.validateFinalForm();
+                break;
+        }
+        
+        // Update validation display if on final step
+        if (this.currentStep === 4 && validationResults) {
+            this.updateValidationDisplay(isValid);
+        }
+        
+        return isValid;
+    }
+    
+    validateSuiteSelection() {
+        const suiteId = document.getElementById('suite_id').value;
+        
+        if (!suiteId) {
+            return false;
+        }
+        
+        if (suiteId === 'custom') {
+            const fileInput = document.getElementById('config-file');
+            return fileInput.files.length > 0;
+        }
+        
+        return true;
+    }
+    
+    validateTargetSystem() {
+        const targetSystem = document.getElementById('target_system').value;
+        
+        if (!targetSystem) {
+            return false;
+        }
+        
+        // Validate target-specific fields
+        if (targetSystem.startsWith('openai')) {
+            const apiKey = document.getElementById('openai_api_key').value;
+            return apiKey.length > 0;
+        } else if (targetSystem === 'huggingface') {
+            const model = document.getElementById('hf_model').value;
+            return model.length > 0;
+        } else if (targetSystem === 'custom_api') {
+            const endpoint = document.getElementById('api_endpoint').value;
+            return endpoint.length > 0;
+        }
+        
+        return true;
+    }
+    
+    validateConfiguration() {
+        const maxWorkers = document.getElementById('max_workers').value;
+        const timeout = document.getElementById('timeout').value;
+        
+        return maxWorkers && timeout && parseInt(timeout) > 0;
+    }
+    
+    validateFinalForm() {
+        return this.validateSuiteSelection() && 
+               this.validateTargetSystem() && 
+               this.validateConfiguration();
+    }
+    
+    updateValidationDisplay(isValid) {
+        const validationResults = document.getElementById('validation-results');
+        
+        if (isValid) {
+            validationResults.innerHTML = `
+                <div class="validation-item valid">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <path d="M22 4L12 14.01l-3-3"/>
+                    </svg>
+                    All configuration valid - ready to launch!
+                </div>
+            `;
+        } else {
+            validationResults.innerHTML = `
+                <div class="validation-item invalid">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M15 9l-6 6M9 9l6 6"/>
+                    </svg>
+                    Please complete all required fields
+                </div>
+            `;
+        }
+    }
+    
+    updateSummary() {
+        const summary = document.getElementById('config-summary');
+        const suiteId = document.getElementById('suite_id').value;
+        const targetSystem = document.getElementById('target_system').value;
+        const maxWorkers = document.getElementById('max_workers').value;
+        
+        summary.innerHTML = `
+            <div class="config-detail-item">
+                <span class="config-detail-label">Evaluation Suite:</span>
+                <span class="config-detail-value">${this.getSuiteName(suiteId)}</span>
+            </div>
+            <div class="config-detail-item">
+                <span class="config-detail-label">Target System:</span>
+                <span class="config-detail-value">${this.getTargetName(targetSystem)}</span>
+            </div>
+            <div class="config-detail-item">
+                <span class="config-detail-label">Parallel Workers:</span>
+                <span class="config-detail-value">${maxWorkers}</span>
+            </div>
+            <div class="config-detail-item">
+                <span class="config-detail-label">Estimated Duration:</span>
+                <span class="config-detail-value">${this.getEstimatedDuration(suiteId, maxWorkers)}</span>
+            </div>
+        `;
+    }
+    
+    getSuiteName(suiteId) {
+        const names = {
+            'basic_qa': 'Basic Q&A',
+            'comprehensive': 'Comprehensive',
+            'reasoning': 'Reasoning & Logic',
+            'custom': 'Custom Upload'
+        };
+        return names[suiteId] || suiteId;
+    }
+    
+    getTargetName(targetSystem) {
+        const names = {
+            'openai_gpt4': 'OpenAI GPT-4',
+            'openai_gpt35': 'OpenAI GPT-3.5',
+            'huggingface': 'Hugging Face',
+            'custom_api': 'Custom API'
+        };
+        return names[targetSystem] || targetSystem;
+    }
+    
+    getEstimatedDuration(suiteId, workers) {
+        const baseDurations = {
+            'basic_qa': 5,
+            'comprehensive': 30,
+            'reasoning': 15,
+            'custom': 10
+        };
+        
+        const baseDuration = baseDurations[suiteId] || 10;
+        const adjustedDuration = Math.ceil(baseDuration / parseInt(workers));
+        
+        return `~${adjustedDuration} minutes`;
+    }
+    
+    async submitForm(e) {
+        e.preventDefault();
+        
+        if (!this.validateFinalForm()) {
+            showToast('Please fix validation errors before submitting', 'error');
+            return;
+        }
+        
+        const formData = new FormData(document.getElementById('evaluation-form'));
+        
+        try {
+            showLoading('Starting evaluation...');
+            
+            const response = await fetch('/api/start-evaluation', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showToast('Evaluation started successfully!', 'success');
+                
+                // Redirect to run detail page
+                setTimeout(() => {
+                    window.location.href = `/run/${result.run_id}`;
+                }, 1500);
+            } else {
+                throw new Error(result.error || 'Failed to start evaluation');
+            }
+        } catch (error) {
+            showToast(error.message, 'error');
+        } finally {
+            hideLoading();
+        }
+    }
+    
+    saveDraft() {
+        const formData = new FormData(document.getElementById('evaluation-form'));
+        const draftData = Object.fromEntries(formData.entries());
+        
+        localStorage.setItem('evaluation_draft', JSON.stringify(draftData));
+        showToast('Draft saved successfully', 'success');
+    }
+    
+    loadDraft() {
+        const draft = localStorage.getItem('evaluation_draft');
+        if (draft) {
+            try {
+                const draftData = JSON.parse(draft);
+                // Populate form with draft data
+                Object.entries(draftData).forEach(([key, value]) => {
+                    const field = document.querySelector(`[name="${key}"]`);
+                    if (field) {
+                        field.value = value;
+                    }
+                });
+                
+                showToast('Draft loaded', 'info');
+            } catch (error) {
+                console.error('Failed to load draft:', error);
+            }
+        }
+    }
+}
+
+// Helper functions
+function toggleAdvanced() {
+    const checkbox = document.getElementById('show-advanced');
+    const content = document.querySelector('.advanced-content');
+    
+    if (checkbox.checked) {
+        content.classList.add('show');
+    } else {
+        content.classList.remove('show');
+    }
+}
+
+function updateWeight(elementId, value) {
+    document.getElementById(elementId).textContent = value;
+}
+
+// Initialize wizard when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    window.evaluationWizard = new EvaluationWizard();
+});
+</script>
+{% endblock %} 

@@ -1,0 +1,1093 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluation {{ run_info.run_id[-8:] }} - OpenEvals{% endblock %}
+
+{% block extra_head %}
+<style>
+    .evaluation-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        color: white;
+        padding: var(--spacing-xl) 0;
+        border-radius: var(--border-radius-large);
+        margin-bottom: var(--spacing-xl);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .evaluation-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='20' cy='20' r='1'/%3E%3C/g%3E%3C/svg%3E") repeat;
+        opacity: 0.3;
+    }
+    
+    .header-content {
+        position: relative;
+        z-index: 1;
+        max-width: var(--content-max-width);
+        margin: 0 auto;
+        padding: 0 var(--spacing-lg);
+    }
+    
+    .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .evaluation-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    
+    .evaluation-id {
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        opacity: 0.8;
+        margin: 0;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+    }
+    
+    .btn-white {
+        background: white;
+        color: var(--color-primary);
+        border: 1px solid white;
+    }
+    
+    .btn-white:hover {
+        background: rgba(255, 255, 255, 0.9);
+        transform: translateY(-1px);
+    }
+    
+    .status-section {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: var(--spacing-lg);
+        align-items: center;
+    }
+    
+    .status-badge-large {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    
+    .status-indicator-large {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+    
+    .progress-section {
+        flex: 1;
+    }
+    
+    .progress-large {
+        height: 12px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        overflow: hidden;
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .progress-bar-large {
+        height: 100%;
+        background: white;
+        border-radius: 6px;
+        transition: width var(--transition-slow);
+        position: relative;
+    }
+    
+    .progress-bar-large::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        animation: shimmer 2s infinite;
+    }
+    
+    .progress-text-large {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .timing-info {
+        text-align: right;
+        font-size: 0.875rem;
+        opacity: 0.9;
+    }
+    
+    .content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .main-content {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
+    }
+    
+    .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
+    }
+    
+    .section-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        box-shadow: var(--shadow-small);
+        overflow: hidden;
+    }
+    
+    .section-header {
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+    
+    .section-body {
+        padding: var(--spacing-lg);
+    }
+    
+    .metrics-overview {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: var(--spacing-md);
+    }
+    
+    .metric-item {
+        text-align: center;
+        padding: var(--spacing-md);
+        border-radius: var(--border-radius-small);
+        background: var(--bg-secondary);
+        transition: all var(--transition-fast);
+    }
+    
+    .metric-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-small);
+    }
+    
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--color-primary);
+        margin: 0;
+    }
+    
+    .metric-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin: var(--spacing-xs) 0 0 0;
+    }
+    
+    .task-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .task-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color var(--transition-fast);
+    }
+    
+    .task-item:last-child {
+        border-bottom: none;
+    }
+    
+    .task-item:hover {
+        background: var(--bg-quaternary);
+    }
+    
+    .task-status {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: white;
+        font-weight: 600;
+    }
+    
+    .task-status.completed {
+        background: var(--color-success);
+    }
+    
+    .task-status.running {
+        background: var(--color-primary);
+        animation: pulse 2s infinite;
+    }
+    
+    .task-status.pending {
+        background: var(--text-tertiary);
+    }
+    
+    .task-status.failed {
+        background: var(--color-error);
+    }
+    
+    .task-info {
+        flex: 1;
+    }
+    
+    .task-name {
+        font-weight: 500;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-xs) 0;
+    }
+    
+    .task-description {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .task-score {
+        text-align: right;
+        font-weight: 600;
+        color: var(--text-primary);
+    }
+    
+    .config-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .config-item:last-child {
+        border-bottom: none;
+    }
+    
+    .config-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    .config-value {
+        color: var(--text-primary);
+        font-weight: 500;
+        font-size: 0.875rem;
+        font-family: var(--font-mono);
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: var(--spacing-lg);
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--border-color);
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: var(--spacing-lg);
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -6px;
+        top: 4px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--color-primary);
+        border: 2px solid var(--bg-primary);
+    }
+    
+    .timeline-item.active::before {
+        background: var(--color-success);
+        animation: pulse 2s infinite;
+    }
+    
+    .timeline-time {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+        font-family: var(--font-mono);
+    }
+    
+    .timeline-content {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-top: var(--spacing-xs);
+    }
+    
+    .log-viewer {
+        background: var(--bg-tertiary);
+        border-radius: var(--border-radius-small);
+        font-family: var(--font-mono);
+        font-size: 0.75rem;
+        line-height: 1.4;
+        max-height: 300px;
+        overflow-y: auto;
+        padding: var(--spacing-md);
+        color: var(--text-primary);
+    }
+    
+    .log-entry {
+        display: flex;
+        gap: var(--spacing-sm);
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .log-timestamp {
+        color: var(--text-tertiary);
+        min-width: 80px;
+    }
+    
+    .log-level {
+        min-width: 50px;
+        font-weight: 600;
+    }
+    
+    .log-level.info {
+        color: var(--color-primary);
+    }
+    
+    .log-level.warning {
+        color: var(--color-warning);
+    }
+    
+    .log-level.error {
+        color: var(--color-error);
+    }
+    
+    .log-message {
+        flex: 1;
+    }
+    
+    .results-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+    }
+    
+    .chart-container-small {
+        height: 200px;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .error-message {
+        background: rgba(255, 59, 48, 0.1);
+        color: var(--color-error);
+        padding: var(--spacing-lg);
+        border-radius: var(--border-radius-small);
+        border-left: 4px solid var(--color-error);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .error-title {
+        font-weight: 600;
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    
+    .error-details {
+        font-family: var(--font-mono);
+        font-size: 0.875rem;
+        background: rgba(0, 0, 0, 0.1);
+        padding: var(--spacing-sm);
+        border-radius: var(--border-radius-small);
+        margin-top: var(--spacing-sm);
+    }
+    
+    @media (max-width: 768px) {
+        .header-top {
+            flex-direction: column;
+            gap: var(--spacing-md);
+        }
+        
+        .status-section {
+            grid-template-columns: 1fr;
+            gap: var(--spacing-md);
+        }
+        
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .metrics-overview {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .results-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Evaluation Header -->
+    <div class="evaluation-header">
+        <div class="header-content">
+            <div class="header-top">
+                <div>
+                    <h1 class="evaluation-title" id="run-title">Evaluation {{ run_info.run_id[-8:] }}</h1>
+                    <p class="evaluation-id">ID: {{ run_info.run_id }}</p>
+                </div>
+                <div class="header-actions">
+                    {% if run_info.status == 'completed' %}
+                    <button class="btn btn-white btn-download-results" data-run-id="{{ run_info.run_id }}">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <path d="M7 10l5 5 5-5"/>
+                            <path d="M12 15V3"/>
+                        </svg>
+                        Download Results
+                    </button>
+                    {% endif %}
+                    
+                    {% if run_info.status in ['failed', 'completed'] %}
+                    <button class="btn btn-white" onclick="restartEvaluation('{{ run_info.run_id }}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                            <path d="M21 3v5h-5"/>
+                        </svg>
+                        Restart
+                    </button>
+                    {% endif %}
+                    
+                    <button class="btn btn-white" onclick="shareEvaluation('{{ run_info.run_id }}')">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                            <path d="M16 6l-4-4-4 4"/>
+                            <path d="M12 2v13"/>
+                        </svg>
+                        Share
+                    </button>
+                </div>
+            </div>
+            
+            <div class="status-section">
+                <div>
+                    <span class="status-badge-large status-{{ run_info.status }}" id="run-status">
+                        <span class="status-indicator-large"></span>
+                        {{ run_info.status.upper() }}
+                    </span>
+                </div>
+                
+                <div class="progress-section" id="run-progress">
+                    <div class="progress-large">
+                        <div class="progress-bar-large" style="width: {{ run_info.progress or 0 }}%"></div>
+                    </div>
+                    <div class="progress-text-large">
+                        <span>{{ run_info.current_task or 'Initializing...' }}</span>
+                        <span>{{ run_info.progress or 0 }}% complete</span>
+                    </div>
+                </div>
+                
+                <div class="timing-info">
+                    <div>Started: {{ run_info.start_time.strftime('%m/%d %H:%M') if run_info.start_time else 'N/A' }}</div>
+                    {% if run_info.end_time %}
+                    <div>Completed: {{ run_info.end_time.strftime('%m/%d %H:%M') }}</div>
+                    {% endif %}
+                    <div>Duration: 
+                        {% if run_info.end_time and run_info.start_time %}
+                            {% set duration = (run_info.end_time - run_info.start_time).total_seconds() %}
+                            {% if duration > 3600 %}
+                                {{ "%.1f"|format(duration/3600) }}h
+                            {% elif duration > 60 %}
+                                {{ "%.1f"|format(duration/60) }}m
+                            {% else %}
+                                {{ "%.0f"|format(duration) }}s
+                            {% endif %}
+                        {% elif run_info.status == 'running' %}
+                            <span id="duration-counter">Running...</span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Message (if failed) -->
+    {% if run_info.status == 'failed' and run_info.error %}
+    <div class="error-message">
+        <h3 class="error-title">Evaluation Failed</h3>
+        <p>{{ run_info.error }}</p>
+        <div class="error-details">
+            <strong>Run ID:</strong> {{ run_info.run_id }}<br>
+            <strong>Time:</strong> {{ run_info.end_time.strftime('%Y-%m-%d %H:%M:%S') if run_info.end_time else 'N/A' }}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Content Grid -->
+    <div class="content-grid">
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Results Overview -->
+            {% if run_info.results %}
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 11H7a4 4 0 0 1 0-8h2m0 8h2a4 4 0 0 1 0 8h-2m-6-4h12"/>
+                        </svg>
+                        Results Overview
+                    </h2>
+                </div>
+                <div class="section-body">
+                    <div class="metrics-overview">
+                        <div class="metric-item">
+                            <p class="metric-value">{{ run_info.results.get('total_tasks', 0) }}</p>
+                            <p class="metric-label">Total Tasks</p>
+                        </div>
+                        <div class="metric-item">
+                            <p class="metric-value">{{ "%.1f"|format(run_info.results.get('overall_score', 0) * 100) }}%</p>
+                            <p class="metric-label">Overall Score</p>
+                        </div>
+                        <div class="metric-item">
+                            <p class="metric-value">{{ run_info.results.get('passed_tasks', 0) }}</p>
+                            <p class="metric-label">Passed</p>
+                        </div>
+                        <div class="metric-item">
+                            <p class="metric-value">{{ run_info.results.get('failed_tasks', 0) }}</p>
+                            <p class="metric-label">Failed</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Results -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                            <path d="M7 3v18M15 3v18M3 7h18M3 15h18"/>
+                        </svg>
+                        Detailed Results
+                    </h2>
+                </div>
+                <div class="section-body">
+                    <div class="results-grid">
+                        <!-- Performance Chart -->
+                        <div>
+                            <h4>Performance by Metric</h4>
+                            <div class="chart-container-small">
+                                <canvas id="metrics-chart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Score Distribution -->
+                        <div>
+                            <h4>Score Distribution</h4>
+                            <div class="chart-container-small">
+                                <canvas id="distribution-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Task Progress -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <path d="M22 4L12 14.01l-3-3"/>
+                        </svg>
+                        Task Progress
+                    </h2>
+                </div>
+                <div class="section-body">
+                    <div class="task-list">
+                        {% if run_info.results and run_info.results.get('task_results') %}
+                            {% for task in run_info.results.task_results %}
+                            <div class="task-item">
+                                <div class="task-status completed">
+                                    ✓
+                                </div>
+                                <div class="task-info">
+                                    <h4 class="task-name">{{ task.get('task_name', 'Task ' + loop.index|string) }}</h4>
+                                    <p class="task-description">{{ task.get('description', 'Evaluation task') }}</p>
+                                </div>
+                                <div class="task-score">
+                                    {{ "%.1f"|format(task.get('score', 0) * 100) }}%
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <!-- Sample task progress for demo -->
+                            <div class="task-item">
+                                <div class="task-status completed">✓</div>
+                                <div class="task-info">
+                                    <h4 class="task-name">Question Answering</h4>
+                                    <p class="task-description">Basic Q&A evaluation tasks</p>
+                                </div>
+                                <div class="task-score">92.5%</div>
+                            </div>
+                            
+                            <div class="task-item">
+                                <div class="task-status {% if run_info.status == 'running' %}running{% else %}completed{% endif %}">
+                                    {% if run_info.status == 'running' %}◐{% else %}✓{% endif %}
+                                </div>
+                                <div class="task-info">
+                                    <h4 class="task-name">Reasoning Tasks</h4>
+                                    <p class="task-description">Logical reasoning and problem solving</p>
+                                </div>
+                                <div class="task-score">
+                                    {% if run_info.status == 'running' %}--{% else %}87.3%{% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if run_info.status in ['pending', 'running'] %}
+                            <div class="task-item">
+                                <div class="task-status pending">○</div>
+                                <div class="task-info">
+                                    <h4 class="task-name">Creative Writing</h4>
+                                    <p class="task-description">Text generation and creativity evaluation</p>
+                                </div>
+                                <div class="task-score">--</div>
+                            </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs (if running or failed) -->
+            {% if run_info.status in ['running', 'failed'] %}
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                        </svg>
+                        Execution Logs
+                    </h2>
+                </div>
+                <div class="section-body">
+                    <div class="log-viewer" id="log-viewer">
+                        <div class="log-entry">
+                            <span class="log-timestamp">14:23:01</span>
+                            <span class="log-level info">INFO</span>
+                            <span class="log-message">Starting evaluation suite...</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-timestamp">14:23:02</span>
+                            <span class="log-level info">INFO</span>
+                            <span class="log-message">Loading configuration: {{ run_info.config.get('suite_id', 'basic_qa') }}</span>
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-timestamp">14:23:03</span>
+                            <span class="log-level info">INFO</span>
+                            <span class="log-message">Initializing target system adapter...</span>
+                        </div>
+                        {% if run_info.status == 'running' %}
+                        <div class="log-entry">
+                            <span class="log-timestamp">14:23:15</span>
+                            <span class="log-level info">INFO</span>
+                            <span class="log-message">Processing task 1 of 25...</span>
+                        </div>
+                        {% elif run_info.status == 'failed' %}
+                        <div class="log-entry">
+                            <span class="log-timestamp">14:23:45</span>
+                            <span class="log-level error">ERROR</span>
+                            <span class="log-message">{{ run_info.error or 'Evaluation failed with unknown error' }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Configuration -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2 2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V12a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                        </svg>
+                        Configuration
+                    </h3>
+                </div>
+                <div class="section-body">
+                    <div class="config-item">
+                        <span class="config-label">Suite</span>
+                        <span class="config-value">{{ run_info.config.get('suite_id', 'basic_qa') }}</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">Target System</span>
+                        <span class="config-value">{{ run_info.config.get('target_system', 'openai_gpt4') }}</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">Workers</span>
+                        <span class="config-value">{{ run_info.config.get('max_workers', 4) }}</span>
+                    </div>
+                    <div class="config-item">
+                        <span class="config-label">Timeout</span>
+                        <span class="config-value">{{ run_info.config.get('timeout', 30) }}s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"/>
+                            <path d="M12 6v6l4 2"/>
+                        </svg>
+                        Timeline
+                    </h3>
+                </div>
+                <div class="section-body">
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-time">{{ run_info.start_time.strftime('%H:%M:%S') if run_info.start_time else '--:--:--' }}</div>
+                            <div class="timeline-content">Evaluation started</div>
+                        </div>
+                        
+                        {% if run_info.status == 'running' %}
+                        <div class="timeline-item active">
+                            <div class="timeline-time">{{ "now"|strftime('%H:%M:%S') }}</div>
+                            <div class="timeline-content">Processing tasks...</div>
+                        </div>
+                        {% elif run_info.status == 'completed' %}
+                        <div class="timeline-item">
+                            <div class="timeline-time">{{ run_info.end_time.strftime('%H:%M:%S') if run_info.end_time else '--:--:--' }}</div>
+                            <div class="timeline-content">Evaluation completed successfully</div>
+                        </div>
+                        {% elif run_info.status == 'failed' %}
+                        <div class="timeline-item">
+                            <div class="timeline-time">{{ run_info.end_time.strftime('%H:%M:%S') if run_info.end_time else '--:--:--' }}</div>
+                            <div class="timeline-content">Evaluation failed</div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                        Quick Actions
+                    </h3>
+                </div>
+                <div class="section-body">
+                    <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
+                        {% if run_info.status == 'completed' %}
+                        <button class="btn btn-primary btn-sm btn-download-results" data-run-id="{{ run_info.run_id }}">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <path d="M7 10l5 5 5-5"/>
+                                <path d="M12 15V3"/>
+                            </svg>
+                            Download JSON
+                        </button>
+                        
+                        <button class="btn btn-outline btn-sm" onclick="exportToCSV('{{ run_info.run_id }}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                            </svg>
+                            Export CSV
+                        </button>
+                        {% endif %}
+                        
+                        {% if run_info.status in ['failed', 'completed'] %}
+                        <button class="btn btn-outline btn-sm" onclick="cloneEvaluation('{{ run_info.run_id }}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            Clone Config
+                        </button>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline btn-sm" onclick="shareEvaluation('{{ run_info.run_id }}')">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                <path d="M16 6l-4-4-4 4"/>
+                                <path d="M12 2v13"/>
+                            </svg>
+                            Share Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initializeEvaluationDetail();
+    initializeCharts();
+    
+    // Auto-refresh for running evaluations
+    {% if run_info.status == 'running' %}
+    startAutoRefresh();
+    {% endif %}
+});
+
+function initializeEvaluationDetail() {
+    // Join the run room for real-time updates
+    if (typeof socket !== 'undefined') {
+        socket.emit('join_run', { run_id: '{{ run_info.run_id }}' });
+    }
+    
+    // Initialize duration counter for running evaluations
+    {% if run_info.status == 'running' and run_info.start_time %}
+    updateDurationCounter();
+    setInterval(updateDurationCounter, 1000);
+    {% endif %}
+    
+    // Setup scroll to latest log
+    const logViewer = document.getElementById('log-viewer');
+    if (logViewer) {
+        logViewer.scrollTop = logViewer.scrollHeight;
+    }
+}
+
+function initializeCharts() {
+    // Metrics performance chart
+    const metricsCtx = document.getElementById('metrics-chart');
+    if (metricsCtx) {
+        new Chart(metricsCtx, {
+            type: 'radar',
+            data: {
+                labels: ['Accuracy', 'Precision', 'Recall', 'F1-Score', 'Coherence'],
+                datasets: [{
+                    label: 'Performance',
+                    data: [92, 87, 89, 88, 85],
+                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    borderColor: 'rgb(0, 122, 255)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgb(0, 122, 255)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    // Score distribution chart
+    const distributionCtx = document.getElementById('distribution-chart');
+    if (distributionCtx) {
+        new Chart(distributionCtx, {
+            type: 'bar',
+            data: {
+                labels: ['0-20%', '21-40%', '41-60%', '61-80%', '81-100%'],
+                datasets: [{
+                    label: 'Tasks',
+                    data: [0, 2, 5, 8, 10],
+                    backgroundColor: [
+                        'rgb(255, 59, 48)',
+                        'rgb(255, 149, 0)', 
+                        'rgb(255, 204, 0)',
+                        'rgb(52, 199, 89)',
+                        'rgb(0, 122, 255)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function updateDurationCounter() {
+    const startTime = new Date('{{ run_info.start_time.isoformat() if run_info.start_time else "" }}');
+    const now = new Date();
+    const duration = Math.floor((now - startTime) / 1000);
+    
+    const hours = Math.floor(duration / 3600);
+    const minutes = Math.floor((duration % 3600) / 60);
+    const seconds = duration % 60;
+    
+    let durationText = '';
+    if (hours > 0) {
+        durationText = `${hours}h ${minutes}m ${seconds}s`;
+    } else if (minutes > 0) {
+        durationText = `${minutes}m ${seconds}s`;
+    } else {
+        durationText = `${seconds}s`;
+    }
+    
+    const counter = document.getElementById('duration-counter');
+    if (counter) {
+        counter.textContent = durationText;
+    }
+}
+
+function startAutoRefresh() {
+    setInterval(() => {
+        if (window.app) {
+            window.app.loadRunDetails('{{ run_info.run_id }}');
+        }
+    }, 5000);
+}
+
+function restartEvaluation(runId) {
+    if (confirm('Are you sure you want to restart this evaluation with the same configuration?')) {
+        showToast('Evaluation restart requested', 'info');
+        // Implementation would redirect to new evaluation with pre-filled config
+        setTimeout(() => {
+            window.location.href = '/new-evaluation?clone=' + runId;
+        }, 1500);
+    }
+}
+
+function shareEvaluation(runId) {
+    const url = window.location.href;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'OpenEvals - Evaluation Results',
+            text: `Check out these AI evaluation results from OpenEvals`,
+            url: url
+        });
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(url).then(() => {
+            showToast('Link copied to clipboard', 'success');
+        }).catch(() => {
+            showToast('Failed to copy link', 'error');
+        });
+    }
+}
+
+function cloneEvaluation(runId) {
+    showToast('Redirecting to create evaluation with same configuration...', 'info');
+    setTimeout(() => {
+        window.location.href = '/new-evaluation?clone=' + runId;
+    }, 1000);
+}
+
+function exportToCSV(runId) {
+    showToast('Preparing CSV export...', 'info');
+    
+    // Mock CSV data - in real implementation, this would come from the API
+    const csvData = [
+        'Task,Score,Metric,Value',
+        'Question Answering,92.5,Accuracy,0.925',
+        'Reasoning Tasks,87.3,F1-Score,0.873',
+        'Creative Writing,85.0,Coherence,0.850'
+    ].join('\n');
+    
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `evaluation_${runId}_results.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    
+    showToast('CSV exported successfully', 'success');
+}
+
+// Handle real-time updates
+if (typeof socket !== 'undefined') {
+    socket.on('evaluation_progress', function(data) {
+        if (data.run_id === '{{ run_info.run_id }}') {
+            updateEvaluationProgress(data);
+        }
+    });
+}
+</script>
+{% endblock %} 

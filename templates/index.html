@@ -1,0 +1,420 @@
+{% extends "base.html" %}
+
+{% block title %}OpenEvals Dashboard - AI Evaluation Framework{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-hero {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        color: white;
+        padding: var(--spacing-3xl) 0;
+        border-radius: var(--border-radius-large);
+        margin-bottom: var(--spacing-xl);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .dashboard-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+        opacity: 0.3;
+    }
+    
+    .dashboard-hero-content {
+        position: relative;
+        z-index: 1;
+    }
+    
+    .hero-title {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: var(--spacing-md);
+        background: linear-gradient(45deg, #ffffff, rgba(255,255,255,0.8));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.25rem;
+        opacity: 0.9;
+        margin-bottom: var(--spacing-xl);
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .stat-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        padding: var(--spacing-lg);
+        text-align: center;
+        transition: all var(--transition-normal);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+        opacity: 0;
+        transition: opacity var(--transition-fast);
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-large);
+    }
+    
+    .stat-card:hover::before {
+        opacity: 1;
+    }
+    
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        margin: 0 auto var(--spacing-md);
+        padding: 12px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .recent-runs-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .quick-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: var(--spacing-lg);
+    }
+    
+    .action-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        padding: var(--spacing-xl);
+        text-align: center;
+        transition: all var(--transition-normal);
+        cursor: pointer;
+    }
+    
+    .action-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-medium);
+        border-color: var(--color-primary);
+    }
+    
+    .action-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto var(--spacing-lg);
+        padding: 16px;
+        border-radius: 50%;
+        background: rgba(0, 122, 255, 0.1);
+        color: var(--color-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .action-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0 0 var(--spacing-sm) 0;
+    }
+    
+    .action-description {
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-lg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="dashboard-hero">
+        <div class="dashboard-hero-content">
+            <h1 class="hero-title">OpenEvals</h1>
+            <p class="hero-subtitle">
+                Comprehensive AI evaluation framework for robust testing and analysis of AI systems across various tasks and metrics.
+            </p>
+            <div class="d-flex gap-md justify-center">
+                <a href="{{ url_for('new_evaluation') }}" class="btn btn-lg" style="background: white; color: var(--color-primary);">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14M5 12h14"/>
+                    </svg>
+                    Start New Evaluation
+                </a>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-lg btn-outline" style="border-color: white; color: white;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                        <path d="M9 3v18M15 3v18"/>
+                    </svg>
+                    View All Runs
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Overview -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+            </div>
+            <div class="stat-value" data-stat="total">{{ recent_runs|length }}</div>
+            <div class="stat-label">Total Evaluations</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+            </div>
+            <div class="stat-value" data-stat="completed">
+                {{ recent_runs|selectattr('status', 'equalto', 'completed')|list|length }}
+            </div>
+            <div class="stat-label">Completed</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+            </div>
+            <div class="stat-value" data-stat="active">
+                {{ recent_runs|selectattr('status', 'equalto', 'running')|list|length }}
+            </div>
+            <div class="stat-label">Active Runs</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+            </div>
+            <div class="stat-value" data-stat="successRate">94.2%</div>
+            <div class="stat-label">Success Rate</div>
+        </div>
+    </div>
+
+    <!-- Recent Evaluations -->
+    <div class="recent-runs-section">
+        <div class="section-header">
+            <h2 class="section-title">Recent Evaluations</h2>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline btn-sm">
+                View All
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 17l10-10M17 7H7v10"/>
+                </svg>
+            </a>
+        </div>
+        
+        <div id="recent-runs-list">
+            {% if recent_runs %}
+                <div class="row">
+                    {% for run in recent_runs[:6] %}
+                    <div class="col col-6" style="margin-bottom: var(--spacing-lg);">
+                        <div class="evaluation-card" data-run-id="{{ run.run_id }}">
+                            <div class="evaluation-header">
+                                <div>
+                                    <h4 class="evaluation-title">Evaluation {{ run.run_id[-8:] }}</h4>
+                                    <p class="evaluation-subtitle">{{ run.start_time.strftime('%Y-%m-%d %H:%M') if run.start_time else 'N/A' }}</p>
+                                </div>
+                                <div class="evaluation-actions">
+                                    <span class="status-badge status-{{ run.status }}">
+                                        <span class="status-indicator"></span>
+                                        {{ run.status.upper() }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="evaluation-body">
+                                <div class="progress">
+                                    <div class="progress-bar" style="width: {{ run.progress or 0 }}%"></div>
+                                </div>
+                                <div class="progress-text">
+                                    <span>{{ run.progress or 0 }}% complete</span>
+                                    <span>{{ run.current_task or '' }}</span>
+                                </div>
+                                <div class="evaluation-actions" style="margin-top: 1rem;">
+                                    <a href="{{ url_for('evaluation_detail', run_id=run.run_id) }}" class="btn btn-sm btn-primary">View Details</a>
+                                    {% if run.status == 'completed' %}
+                                    <button class="btn btn-sm btn-outline btn-download-results" data-run-id="{{ run.run_id }}">Download</button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                            <path d="M16 2v4M8 2v4M3 10h18"/>
+                        </svg>
+                    </div>
+                    <div class="empty-title">No evaluations yet</div>
+                    <div class="empty-description">Start your first evaluation to see results here.</div>
+                    <a href="{{ url_for('new_evaluation') }}" class="btn btn-primary">Create Evaluation</a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section-header">
+        <h2 class="section-title">Quick Actions</h2>
+    </div>
+    
+    <div class="quick-actions">
+        <a href="{{ url_for('new_evaluation') }}" class="action-card">
+            <div class="action-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v8M8 12h8"/>
+                </svg>
+            </div>
+            <h3 class="action-title">New Evaluation</h3>
+            <p class="action-description">Create and configure a new AI evaluation suite with custom tasks and metrics.</p>
+            <div class="btn btn-primary">Get Started</div>
+        </a>
+        
+        <div class="action-card" onclick="window.location.href='{{ url_for('dashboard') }}'">
+            <div class="action-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <path d="M7 3v18M15 3v18M3 7h18M3 15h18"/>
+                </svg>
+            </div>
+            <h3 class="action-title">View Dashboard</h3>
+            <p class="action-description">Monitor all evaluation runs, track progress, and analyze comprehensive results.</p>
+            <div class="btn btn-outline">Explore</div>
+        </div>
+        
+        <div class="action-card" onclick="showDocumentationModal()">
+            <div class="action-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                </svg>
+            </div>
+            <h3 class="action-title">Documentation</h3>
+            <p class="action-description">Learn how to configure evaluations, create custom adapters, and interpret results.</p>
+            <div class="btn btn-outline">Learn More</div>
+        </div>
+    </div>
+</div>
+
+<!-- Real-time Updates -->
+<script>
+    function showDocumentationModal() {
+        const content = `
+            <div class="documentation-content">
+                <h3>OpenEvals Documentation</h3>
+                <p>OpenEvals is a comprehensive AI evaluation framework designed for robust testing and analysis.</p>
+                
+                <h4>Quick Start</h4>
+                <div class="code-block">
+                    <pre><code># Install OpenEvals
+pip install openevals
+
+# Run an evaluation
+openevals run my_suite --target openai_gpt4 --config config.yaml</code></pre>
+                </div>
+                
+                <h4>Key Features</h4>
+                <ul>
+                    <li>Configurable evaluation suites using YAML</li>
+                    <li>Multiple AI system adapters (OpenAI, Hugging Face, etc.)</li>
+                    <li>Rich set of evaluation metrics</li>
+                    <li>Real-time progress monitoring</li>
+                    <li>Detailed HTML and JSON reports</li>
+                </ul>
+                
+                <h4>Configuration Example</h4>
+                <div class="code-block">
+                    <pre><code>evaluation_suites:
+  - id: "basic_qa"
+    name: "Basic Q&A Evaluation"
+    description: "Tests basic question answering capabilities"
+    tasks:
+      - task_id: "simple_questions"
+        input_format: "text"
+        output_type: "text"
+        grading_criteria:
+          - metric: "exact_match"
+            weight: 0.5
+          - metric: "semantic_similarity"
+            weight: 0.5</code></pre>
+                </div>
+                
+                <div style="margin-top: 2rem;">
+                    <a href="https://github.com/nikjois/openevals" class="btn btn-primary" target="_blank">
+                        View Full Documentation
+                    </a>
+                </div>
+            </div>
+        `;
+        
+        if (window.app) {
+            window.app.showModal(content, 'OpenEvals Documentation');
+        }
+    }
+    
+    // Auto-refresh dashboard data every 30 seconds
+    setInterval(() => {
+        if (window.app) {
+            window.app.loadDashboardData();
+        }
+    }, 30000);
+</script>
+{% endblock %} 

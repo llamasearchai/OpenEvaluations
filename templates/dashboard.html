@@ -1,0 +1,976 @@
+{% extends "base.html" %}
+
+{% block title %}Evaluation Dashboard - OpenEvals{% endblock %}
+
+{% block extra_head %}
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-xl);
+        padding: var(--spacing-lg) 0;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .dashboard-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .dashboard-subtitle {
+        color: var(--text-secondary);
+        margin: var(--spacing-xs) 0 0 0;
+    }
+    
+    .dashboard-controls {
+        display: flex;
+        gap: var(--spacing-md);
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    .search-box {
+        position: relative;
+        min-width: 300px;
+    }
+    
+    .search-input {
+        padding-left: 40px;
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+    }
+    
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-tertiary);
+    }
+    
+    .filter-dropdown {
+        position: relative;
+    }
+    
+    .filter-button {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: 10px var(--spacing-md);
+        background: var(--bg-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--border-radius-small);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+    }
+    
+    .filter-button:hover {
+        border-color: var(--color-primary);
+    }
+    
+    .analytics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .analytics-card {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        padding: var(--spacing-lg);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .analytics-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+    }
+    
+    .analytics-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .analytics-title {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin: 0;
+    }
+    
+    .analytics-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .analytics-change {
+        font-size: 0.875rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        margin-top: var(--spacing-sm);
+    }
+    
+    .analytics-change.positive {
+        color: var(--color-success);
+    }
+    
+    .analytics-change.negative {
+        color: var(--color-error);
+    }
+    
+    .runs-table-container {
+        background: var(--bg-primary);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        box-shadow: var(--shadow-small);
+    }
+    
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--spacing-lg);
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+    }
+    
+    .table-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin: 0;
+    }
+    
+    .table-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+    }
+    
+    .runs-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .runs-table th {
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        padding: var(--spacing-md) var(--spacing-lg);
+        text-align: left;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+    
+    .runs-table th.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+    }
+    
+    .runs-table th.sortable:hover {
+        background: var(--bg-quaternary);
+    }
+    
+    .sort-icon {
+        margin-left: var(--spacing-xs);
+        opacity: 0.5;
+        transition: opacity var(--transition-fast);
+    }
+    
+    .runs-table th.sorted .sort-icon {
+        opacity: 1;
+    }
+    
+    .runs-table td {
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    .runs-table tr:hover {
+        background: var(--bg-quaternary);
+    }
+    
+    .run-id-link {
+        color: var(--color-primary);
+        font-weight: 500;
+        text-decoration: none;
+        font-family: var(--font-mono);
+    }
+    
+    .run-id-link:hover {
+        text-decoration: underline;
+    }
+    
+    .duration-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        background: var(--bg-quaternary);
+        color: var(--text-secondary);
+        border-radius: var(--border-radius-small);
+        font-size: 0.75rem;
+        font-weight: 500;
+        font-family: var(--font-mono);
+    }
+    
+    .progress-cell {
+        min-width: 120px;
+    }
+    
+    .mini-progress {
+        width: 100%;
+        height: 6px;
+        background: var(--bg-quaternary);
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: var(--spacing-xs);
+    }
+    
+    .mini-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+        transition: width var(--transition-normal);
+    }
+    
+    .progress-percentage {
+        font-size: 0.75rem;
+        color: var(--text-tertiary);
+    }
+    
+    .actions-cell {
+        white-space: nowrap;
+    }
+    
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--border-radius-small);
+    }
+    
+    .pagination-container {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: var(--spacing-lg);
+        border-top: 1px solid var(--border-color);
+        background: var(--bg-secondary);
+    }
+    
+    .pagination-info {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+    }
+    
+    .empty-state-table {
+        text-align: center;
+        padding: var(--spacing-3xl);
+        color: var(--text-secondary);
+    }
+    
+    .chart-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .chart-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--spacing-lg);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    @media (max-width: 768px) {
+        .dashboard-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: var(--spacing-md);
+        }
+        
+        .dashboard-controls {
+            width: 100%;
+            justify-content: space-between;
+        }
+        
+        .search-box {
+            min-width: auto;
+            flex: 1;
+        }
+        
+        .analytics-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .chart-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .runs-table-container {
+            overflow-x: auto;
+        }
+        
+        .runs-table {
+            min-width: 800px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div>
+            <h1 class="dashboard-title">Evaluation Dashboard</h1>
+            <p class="dashboard-subtitle">Monitor and analyze all evaluation runs</p>
+        </div>
+        
+        <div class="dashboard-controls">
+            <div class="search-box">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                </svg>
+                <input type="text" class="form-control search-input" placeholder="Search evaluations..." id="search-input">
+            </div>
+            
+            <div class="filter-dropdown dropdown">
+                <button class="filter-button dropdown-toggle" id="status-filter">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 6h18M7 12h10M10 18h4"/>
+                    </svg>
+                    All Status
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                </button>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="#" data-filter="all">All Status</a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item" href="#" data-filter="running">Running</a>
+                    <a class="dropdown-item" href="#" data-filter="completed">Completed</a>
+                    <a class="dropdown-item" href="#" data-filter="failed">Failed</a>
+                    <a class="dropdown-item" href="#" data-filter="pending">Pending</a>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('new_evaluation') }}" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 5v14M5 12h14"/>
+                </svg>
+                New Evaluation
+            </a>
+            
+            <button class="btn btn-outline" id="refresh-btn" title="Refresh data">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                    <path d="M21 3v5h-5"/>
+                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+                    <path d="M3 21v-5h5"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Analytics Overview -->
+    <div class="analytics-grid">
+        <div class="analytics-card">
+            <div class="analytics-header">
+                <h3 class="analytics-title">Total Evaluations</h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+            </div>
+            <p class="analytics-value" id="total-runs">{{ runs|length }}</p>
+            <div class="analytics-change positive">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 17l10-10M17 7H7v10"/>
+                </svg>
+                +12% from last week
+            </div>
+        </div>
+        
+        <div class="analytics-card">
+            <div class="analytics-header">
+                <h3 class="analytics-title">Success Rate</h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                    <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+            </div>
+            <p class="analytics-value" id="success-rate">
+                {% set completed = runs|selectattr('status', 'equalto', 'completed')|list|length %}
+                {% set total = runs|length %}
+                {{ "%.1f"|format((completed/total*100) if total > 0 else 0) }}%
+            </p>
+            <div class="analytics-change positive">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M7 17l10-10M17 7H7v10"/>
+                </svg>
+                +2.3% improvement
+            </div>
+        </div>
+        
+        <div class="analytics-card">
+            <div class="analytics-header">
+                <h3 class="analytics-title">Active Runs</h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+            </div>
+            <p class="analytics-value" id="active-runs">{{ runs|selectattr('status', 'equalto', 'running')|list|length }}</p>
+            <div class="analytics-change">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="1"/>
+                    <path d="M12 1v6M12 17v6"/>
+                </svg>
+                Currently running
+            </div>
+        </div>
+        
+        <div class="analytics-card">
+            <div class="analytics-header">
+                <h3 class="analytics-title">Avg Duration</h3>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v4l2 2"/>
+                </svg>
+            </div>
+            <p class="analytics-value" id="avg-duration">3.2m</p>
+            <div class="analytics-change negative">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 7l-10 10M7 7h10v10"/>
+                </svg>
+                +0.5m slower
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Section -->
+    <div class="chart-grid">
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">Evaluation Trends</h3>
+                <div class="chart-controls">
+                    <button class="chart-toggle active" data-period="7d">7 Days</button>
+                    <button class="chart-toggle" data-period="30d">30 Days</button>
+                    <button class="chart-toggle" data-period="90d">90 Days</button>
+                </div>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="trends-chart"></canvas>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <div class="chart-header">
+                <h3 class="chart-title">Status Distribution</h3>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="status-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Runs Table -->
+    <div class="runs-table-container">
+        <div class="table-header">
+            <h3 class="table-title">Evaluation Runs</h3>
+            <div class="table-actions">
+                <button class="btn btn-outline btn-sm" id="export-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <path d="M7 10l5 5 5-5"/>
+                        <path d="M12 15V3"/>
+                    </svg>
+                    Export
+                </button>
+                <label class="btn btn-outline btn-sm">
+                    Auto-refresh
+                    <input type="checkbox" id="auto-refresh" style="margin-left: 8px;">
+                </label>
+            </div>
+        </div>
+        
+        <table class="runs-table" id="runs-table">
+            <thead>
+                <tr>
+                    <th class="sortable" data-sort="run_id">
+                        Run ID
+                        <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 10l5-5 5 5M7 14l5 5 5-5"/>
+                        </svg>
+                    </th>
+                    <th class="sortable" data-sort="status">
+                        Status
+                        <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 10l5-5 5 5M7 14l5 5 5-5"/>
+                        </svg>
+                    </th>
+                    <th class="sortable" data-sort="start_time">
+                        Started
+                        <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 10l5-5 5 5M7 14l5 5 5-5"/>
+                        </svg>
+                    </th>
+                    <th class="sortable" data-sort="duration">
+                        Duration
+                        <svg class="sort-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M7 10l5-5 5 5M7 14l5 5 5-5"/>
+                        </svg>
+                    </th>
+                    <th>Progress</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if runs %}
+                    {% for run in runs %}
+                    <tr data-run-id="{{ run.run_id }}" data-status="{{ run.status }}">
+                        <td>
+                            <a href="{{ url_for('evaluation_detail', run_id=run.run_id) }}" class="run-id-link">
+                                {{ run.run_id[-8:] }}
+                            </a>
+                        </td>
+                        <td>
+                            <span class="status-badge status-{{ run.status }}">
+                                <span class="status-indicator"></span>
+                                {{ run.status.upper() }}
+                            </span>
+                        </td>
+                        <td>
+                            <span data-tooltip="{{ run.start_time.strftime('%Y-%m-%d %H:%M:%S') if run.start_time else 'N/A' }}">
+                                {{ run.start_time.strftime('%m/%d %H:%M') if run.start_time else 'N/A' }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if run.end_time and run.start_time %}
+                                {% set duration = (run.end_time - run.start_time).total_seconds() %}
+                                <span class="duration-badge">
+                                    {% if duration > 3600 %}
+                                        {{ "%.1f"|format(duration/3600) }}h
+                                    {% elif duration > 60 %}
+                                        {{ "%.1f"|format(duration/60) }}m
+                                    {% else %}
+                                        {{ "%.0f"|format(duration) }}s
+                                    {% endif %}
+                                </span>
+                            {% elif run.status == 'running' %}
+                                <span class="duration-badge">Running...</span>
+                            {% else %}
+                                <span class="duration-badge">-</span>
+                            {% endif %}
+                        </td>
+                        <td class="progress-cell">
+                            <div class="mini-progress">
+                                <div class="mini-progress-bar" style="width: {{ run.progress or 0 }}%"></div>
+                            </div>
+                            <div class="progress-percentage">{{ run.progress or 0 }}%</div>
+                        </td>
+                        <td class="actions-cell">
+                            <div class="d-flex gap-sm">
+                                <a href="{{ url_for('evaluation_detail', run_id=run.run_id) }}" 
+                                   class="btn btn-outline btn-icon" 
+                                   title="View details">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                        <circle cx="12" cy="12" r="3"/>
+                                    </svg>
+                                </a>
+                                {% if run.status == 'completed' %}
+                                <button class="btn btn-outline btn-icon btn-download-results" 
+                                        data-run-id="{{ run.run_id }}" 
+                                        title="Download results">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                        <path d="M7 10l5 5 5-5"/>
+                                        <path d="M12 15V3"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
+                                {% if run.status in ['failed', 'completed'] %}
+                                <button class="btn btn-outline btn-icon" 
+                                        onclick="restartEvaluation('{{ run.run_id }}')" 
+                                        title="Restart evaluation">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+                                        <path d="M21 3v5h-5"/>
+                                    </svg>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" class="empty-state-table">
+                            <div class="empty-icon">
+                                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <path d="M16 2v4M8 2v4M3 10h18"/>
+                                </svg>
+                            </div>
+                            <div class="empty-title">No evaluations found</div>
+                            <div class="empty-description">Start your first evaluation to see results here.</div>
+                            <a href="{{ url_for('new_evaluation') }}" class="btn btn-primary" style="margin-top: 1rem;">
+                                Create Evaluation
+                            </a>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        
+        {% if runs|length > 0 %}
+        <div class="pagination-container">
+            <div class="pagination-info">
+                Showing {{ runs|length }} evaluations
+            </div>
+            <div class="pagination" id="pagination">
+                <!-- Pagination will be rendered by JavaScript -->
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+// Dashboard JavaScript functionality
+document.addEventListener('DOMContentLoaded', function() {
+    initializeDashboard();
+    initializeCharts();
+    initializeTableSorting();
+    initializeFilters();
+    setupAutoRefresh();
+});
+
+function initializeDashboard() {
+    // Search functionality
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(filterTable, 300));
+    }
+    
+    // Refresh button
+    const refreshBtn = document.getElementById('refresh-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            location.reload();
+        });
+    }
+    
+    // Export functionality
+    const exportBtn = document.getElementById('export-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportData);
+    }
+}
+
+function initializeCharts() {
+    // Trends chart
+    const trendsCtx = document.getElementById('trends-chart');
+    if (trendsCtx) {
+        new Chart(trendsCtx, {
+            type: 'line',
+            data: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                datasets: [{
+                    label: 'Evaluations',
+                    data: [12, 19, 3, 5, 2, 3, 9],
+                    borderColor: 'rgb(0, 122, 255)',
+                    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Status distribution chart
+    const statusCtx = document.getElementById('status-chart');
+    if (statusCtx) {
+        const statusData = {
+            completed: {{ runs|selectattr('status', 'equalto', 'completed')|list|length }},
+            running: {{ runs|selectattr('status', 'equalto', 'running')|list|length }},
+            failed: {{ runs|selectattr('status', 'equalto', 'failed')|list|length }},
+            pending: {{ runs|selectattr('status', 'equalto', 'pending')|list|length }}
+        };
+        
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completed', 'Running', 'Failed', 'Pending'],
+                datasets: [{
+                    data: [statusData.completed, statusData.running, statusData.failed, statusData.pending],
+                    backgroundColor: [
+                        'rgb(52, 199, 89)',
+                        'rgb(0, 122, 255)',
+                        'rgb(255, 59, 48)',
+                        'rgb(255, 149, 0)'
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '60%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function initializeTableSorting() {
+    const sortableHeaders = document.querySelectorAll('.sortable');
+    let currentSort = { column: null, direction: 'asc' };
+    
+    sortableHeaders.forEach(header => {
+        header.addEventListener('click', () => {
+            const column = header.dataset.sort;
+            
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+            
+            // Update visual indicators
+            sortableHeaders.forEach(h => h.classList.remove('sorted'));
+            header.classList.add('sorted');
+            
+            sortTable(column, currentSort.direction);
+        });
+    });
+}
+
+function sortTable(column, direction) {
+    const table = document.getElementById('runs-table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    
+    rows.sort((a, b) => {
+        let aVal, bVal;
+        
+        switch (column) {
+            case 'run_id':
+                aVal = a.dataset.runId;
+                bVal = b.dataset.runId;
+                break;
+            case 'status':
+                aVal = a.dataset.status;
+                bVal = b.dataset.status;
+                break;
+            case 'start_time':
+                aVal = new Date(a.cells[2].textContent);
+                bVal = new Date(b.cells[2].textContent);
+                break;
+            default:
+                aVal = a.cells[2].textContent;
+                bVal = b.cells[2].textContent;
+        }
+        
+        if (direction === 'asc') {
+            return aVal > bVal ? 1 : -1;
+        } else {
+            return aVal < bVal ? 1 : -1;
+        }
+    });
+    
+    rows.forEach(row => tbody.appendChild(row));
+}
+
+function initializeFilters() {
+    const filterItems = document.querySelectorAll('.dropdown-item[data-filter]');
+    
+    filterItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            const filter = item.dataset.filter;
+            
+            // Update button text
+            const button = document.getElementById('status-filter');
+            button.firstChild.textContent = item.textContent;
+            
+            // Close dropdown
+            item.closest('.dropdown').classList.remove('open');
+            
+            // Apply filter
+            filterTableByStatus(filter);
+        });
+    });
+}
+
+function filterTable() {
+    const searchTerm = document.getElementById('search-input').value.toLowerCase();
+    const rows = document.querySelectorAll('#runs-table tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        const isVisible = text.includes(searchTerm);
+        row.style.display = isVisible ? '' : 'none';
+    });
+}
+
+function filterTableByStatus(status) {
+    const rows = document.querySelectorAll('#runs-table tbody tr');
+    
+    rows.forEach(row => {
+        const rowStatus = row.dataset.status;
+        const isVisible = status === 'all' || rowStatus === status;
+        row.style.display = isVisible ? '' : 'none';
+    });
+}
+
+function setupAutoRefresh() {
+    const autoRefreshCheckbox = document.getElementById('auto-refresh');
+    let refreshInterval;
+    
+    if (autoRefreshCheckbox) {
+        autoRefreshCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                refreshInterval = setInterval(() => {
+                    location.reload();
+                }, 30000); // Refresh every 30 seconds
+                showToast('Auto-refresh enabled', 'success');
+            } else {
+                clearInterval(refreshInterval);
+                showToast('Auto-refresh disabled', 'info');
+            }
+        });
+    }
+}
+
+function exportData() {
+    const data = [];
+    const rows = document.querySelectorAll('#runs-table tbody tr');
+    
+    rows.forEach(row => {
+        if (row.style.display !== 'none') {
+            const cells = row.querySelectorAll('td');
+            data.push({
+                runId: cells[0].textContent.trim(),
+                status: cells[1].textContent.trim(),
+                started: cells[2].textContent.trim(),
+                duration: cells[3].textContent.trim(),
+                progress: cells[4].textContent.trim()
+            });
+        }
+    });
+    
+    const csv = convertToCSV(data);
+    downloadCSV(csv, 'evaluations.csv');
+    showToast('Data exported successfully', 'success');
+}
+
+function convertToCSV(data) {
+    const headers = ['Run ID', 'Status', 'Started', 'Duration', 'Progress'];
+    const csvContent = [
+        headers.join(','),
+        ...data.map(row => [
+            row.runId,
+            row.status,
+            row.started,
+            row.duration,
+            row.progress
+        ].join(','))
+    ].join('\n');
+    
+    return csvContent;
+}
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+}
+
+function restartEvaluation(runId) {
+    if (confirm('Are you sure you want to restart this evaluation?')) {
+        // Implementation would depend on your API
+        showToast('Evaluation restart requested', 'info');
+    }
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %} 
